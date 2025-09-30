@@ -1,0 +1,18 @@
+# Node/TypeScript/VSCode
+node_modules/
+dist/
+.env
+known_issues.json
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
+*.log
+.vscode/
+.idea/
+*.tsbuildinfo
+# OS
+Thumbs.db
+# Docker
+*.local
+# Misc
+*.swp
