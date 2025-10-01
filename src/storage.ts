@@ -1,9 +1,7 @@
 import fs from 'fs';
-import path from 'path';
 import { IssueRecord, KnownIssuesData } from './types';
 import { logger } from './logger';
-
-const KNOWN_ISSUES_FILE = path.resolve(__dirname, '../known_issues.json');
+import { config } from './config';
 
 export class Storage {
   private data: KnownIssuesData = { issues: [] };
@@ -13,9 +11,11 @@ export class Storage {
   }
 
   private load(): void {
+    logger.info("Persisting known issues from file:", config.knownIssuesFile);
+
     try {
-      if (fs.existsSync(KNOWN_ISSUES_FILE)) {
-        const fileContent = fs.readFileSync(KNOWN_ISSUES_FILE, 'utf-8');
+      if (fs.existsSync(config.knownIssuesFile)) {
+        const fileContent = fs.readFileSync(config.knownIssuesFile, 'utf-8');
         const parsed = JSON.parse(fileContent);
 
         // 向後兼容：如果是舊格式（陣列），轉換為新格式
@@ -43,7 +43,7 @@ export class Storage {
 
   private save(): void {
     try {
-      fs.writeFileSync(KNOWN_ISSUES_FILE, JSON.stringify(this.data, null, 2), 'utf-8');
+      fs.writeFileSync(config.knownIssuesFile, JSON.stringify(this.data, null, 2), 'utf-8');
       logger.debug('Known issues saved to disk');
     } catch (e) {
       logger.error('Failed to save known issues file:', e);

@@ -1,4 +1,4 @@
-import { validateConfig } from './config';
+import { config, validateConfig } from './config';
 import { Scheduler } from './scheduler';
 import { logger } from './logger';
 
