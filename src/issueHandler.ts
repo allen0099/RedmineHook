@@ -43,20 +43,51 @@ export class IssueHandler {
         issueRecord.triggerId = trigger.id;
         issueRecord.triggerToken = trigger.token;
 
+        // 準備 Pipeline 環境變數
+        const pipelineVariables = this.buildPipelineVariables(issue);
+
         // 觸發 Pipeline
         const pipelineTriggered = await this.gitlabService.triggerPipeline(
           gitlabProject.id,
           trigger.token,
-          gitlabProject.default_branch || 'main'
+          gitlabProject.default_branch || 'main',
+          pipelineVariables
         );
 
         if (pipelineTriggered) {
           logger.info(`Pipeline triggered successfully for issue #${issue.id}`);
+          
+          // 更新 issue 狀態為 InProgress
+          const inProgressId = this.redmineService.getInProgressStatusId();
+          if (inProgressId) {
+            const statusUpdated = await this.redmineService.updateIssueStatus(issue.id, inProgressId);
+            if (statusUpdated) {
+              logger.info(`Issue #${issue.id} status updated to InProgress`);
+            } else {
+              logger.warn(`Failed to update issue #${issue.id} status to InProgress`);
+            }
+          } else {
+            logger.warn(`InProgress status ID not available, skipping status update for issue #${issue.id}`);
+          }
         } else {
-          logger.warn(`Failed to trigger pipeline for issue #${issue.id}`);
+          logger.error(`Failed to trigger pipeline for issue #${issue.id}`);
+          
+          // 標記 issue 為 GitLab 失敗並取消指派
+          const marked = await this.redmineService.markIssueAsGitLabFailed(issue.id, issue.subject);
+          if (marked) {
+            logger.info(`Issue #${issue.id} marked as GitLab failed and unassigned`);
+          } else {
+            logger.error(`Failed to mark issue #${issue.id} as GitLab failed`);
+          }
         }
       } else {
         logger.warn(`Failed to create pipeline trigger for issue #${issue.id}`);
+        
+        // 標記 issue 為 GitLab 失敗並取消指派
+        const marked = await this.redmineService.markIssueAsGitLabFailed(issue.id, issue.subject);
+        if (marked) {
+          logger.info(`Issue #${issue.id} marked as GitLab failed and unassigned`);
+        }
       }
     } else {
       logger.warn(`No GitLab project found for Redmine project: ${projectName}`);
@@ -64,6 +95,23 @@ export class IssueHandler {
 
     // 儲存 issue record
     this.storage.addIssue(issueRecord);
+  }
+
+  /**
+   * Builds a set of environment variables for triggering a GitLab pipeline based on the given Redmine issue.
+   * 
+   * @param issue The Redmine issue to extract variables from.
+   * @returns An object containing pipeline variables:
+   *   - REDMINE_ISSUE_TITLE: The issue's subject.
+   *   - REDMINE_ISSUE_DESCRIPTION: The issue's description (empty string if not present).
+   *   - REDMINE_ISSUE_ID: The issue's ID as a string.
+   */
+  private buildPipelineVariables(issue: RedmineIssue): Record<string, string> {
+    return {
+      REDMINE_ISSUE_TITLE: issue.subject,
+      REDMINE_ISSUE_DESCRIPTION: issue.description || '',
+      REDMINE_ISSUE_ID: issue.id.toString(),
+    };
   }
 
   /**

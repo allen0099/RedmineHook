@@ -94,12 +94,23 @@ export class GitLabService {
   async triggerPipeline(projectId: number, token: string, ref: string, variables?: Record<string, string>): Promise<boolean> {
     try {
       logger.info(`Triggering pipeline for project ${projectId} on ref ${ref}...`);
+      
+      // 構建請求參數
+      const params: any = {
+        token,
+        ref,
+      };
+
+      // 將變數轉換為 variables[key]=value 格式
+      if (variables) {
+        for (const [key, value] of Object.entries(variables)) {
+          params[`variables[${key}]`] = value;
+        }
+        logger.debug('Pipeline variables:', variables);
+      }
+
       const res = await this.client.post(`/projects/${projectId}/trigger/pipeline`, null, {
-        params: {
-          token,
-          ref,
-          ...variables,
-        },
+        params,
       });
 
       logger.info(`Pipeline triggered successfully for project ${projectId}`);
@@ -107,6 +118,10 @@ export class GitLabService {
       return true;
     } catch (err: any) {
       logger.error(`Error triggering pipeline for project ${projectId}:`, err.message);
+      if (err.response) {
+        logger.error('Response status:', err.response.status);
+        logger.error('Response data:', err.response.data);
+      }
       return false;
     }
   }

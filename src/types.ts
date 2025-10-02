@@ -1,6 +1,7 @@
 export interface RedmineIssue {
   id: number;
   subject: string;
+  description?: string;
   project: {
     id: number;
     name: string;
@@ -13,6 +14,17 @@ export interface RedmineIssue {
     id: number;
     name: string;
   };
+}
+
+export interface RedmineIssueStatus {
+  id: number;
+  name: string;
+}
+
+export interface StatusCache {
+  statuses: RedmineIssueStatus[];
+  inProgressId: number | null;
+  lastFetched: string;
 }
 
 export interface GitLabProject {

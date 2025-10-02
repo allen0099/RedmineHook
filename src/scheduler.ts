@@ -82,8 +82,12 @@ export class Scheduler {
   /**
    * 啟動排程器
    */
-  start(): void {
+  async start(): Promise<void> {
     logger.info(`Redmine Issue Watcher started. Schedule: ${config.cron.schedule}`);
+
+    // 初始化狀態快取
+    logger.info('Initializing Redmine status cache...');
+    await this.redmineService.fetchAndCacheStatuses();
 
     // 建立排程任務
     this.task = cron.schedule(config.cron.schedule, async () => {
